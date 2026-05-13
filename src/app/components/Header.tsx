@@ -5,7 +5,10 @@ interface HeaderProps {
   onTabChange: (tab: string) => void;
   onLogoClick: () => void;
   onLogout: () => void;
-  user: { name: string; email: string } | null;
+
+  user: {
+    name: string;
+  } | null;
 }
 
 export function Header({
@@ -34,6 +37,7 @@ export function Header({
             >
               ADMIN
             </button>
+
             <nav className="flex">
               {tabs.map((tab) => (
                 <button
@@ -46,8 +50,9 @@ export function Header({
                   }`}
                 >
                   {tab.label}
+
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
                   )}
                 </button>
               ))}
@@ -57,13 +62,22 @@ export function Header({
           {/* Right - Auth */}
           <div className="flex items-center gap-3">
             {user && (
-              <button
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
-                onClick={onLogout}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium">로그아웃</span>
-              </button>
+              <>
+                <span className="text-sm text-gray-700 font-medium">
+                  {user.name}님
+                </span>
+
+                <button
+                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                  onClick={onLogout}
+                >
+                  <LogOut className="w-4 h-4" />
+
+                  <span className="text-sm font-medium">
+                    로그아웃
+                  </span>
+                </button>
+              </>
             )}
           </div>
         </div>

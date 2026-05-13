@@ -35,7 +35,7 @@ import type {
 } from "../../types";
 
 const API_BASE_URL =
-  "http://oval-zigzagged-umbrella.ngrok-free.dev";
+  "https://oval-zigzagged-umbrella.ngrok-free.dev";
 
 interface ChatbotLogResponse {
   content: ChatbotLogItem[];

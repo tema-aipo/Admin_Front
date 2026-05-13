@@ -1,27 +1,48 @@
 import { useState, useEffect } from "react";
-import { Search, Trash2, AlertCircle } from "lucide-react";
+import {
+  Search,
+  Trash2,
+  AlertCircle,
+} from "lucide-react";
+
 import type { User } from "../../types";
 
 const API_BASE_URL =
-  "http://oval-zigzagged-umbrella.ngrok-free.dev";
+  "https://oval-zigzagged-umbrella.ngrok-free.dev";
 
 interface UserApiResponse {
   userId: number;
   loginId: string;
   userName: string;
-  email: string;
-  role: string;
-  userStatus: "ACTIVE" | "INACTIVE" | "WITHDRAWN" | "SUSPENDED";
+
+  userStatus:
+    | "ACTIVE"
+    | "INACTIVE"
+    | "WITHDRAWN"
+    | "SUSPENDED";
+
+  createdAt: string;
+  lastLoginAt: string;
 }
 
 interface UserListResponse {
   content: UserApiResponse[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }
 
 export function UserManagement() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [users, setUsers] = useState<User[]>(
+    []
+  );
+
+  const [loading, setLoading] =
+    useState(true);
 
   /**
    * 사용자 목록 조회
@@ -30,28 +51,74 @@ export function UserManagement() {
     try {
       setLoading(true);
 
+      const token =
+        localStorage.getItem("accessToken");
+
+      console.log("TOKEN:", token);
+
+      if (!token) {
+        alert("로그인이 필요합니다.");
+        return;
+      }
+
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/admin/users?page=0&size=20`
+        `${API_BASE_URL}/api/v1/admin/users?page=0&size=20`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type":
+              "application/json",
+            "ngrok-skip-browser-warning":
+              "69420",
+          },
+        }
+      );
+
+      console.log(
+        "USER API STATUS:",
+        response.status
       );
 
       if (!response.ok) {
-        throw new Error("사용자 목록 조회 실패");
+        const errorText =
+          await response.text();
+
+        console.error(errorText);
+
+        throw new Error(
+          "사용자 목록 조회 실패"
+        );
       }
 
-      const data: UserListResponse = await response.json();
+      const data: UserListResponse =
+        await response.json();
+
+      console.log("USER DATA:", data);
 
       /**
        * 백엔드 응답 → 프론트 User 타입 변환
        */
-      const mappedUsers: User[] = data.content.map((user) => ({
-        id: user.userId,
-        name: user.userName,
-        username: user.loginId,
-      }));
+      const mappedUsers: User[] =
+        data.content
+          .filter(
+            (user) =>
+              user.userStatus === "ACTIVE"
+          )
+          .map((user) => ({
+            id: user.userId,
+            name: user.userName,
+            username: user.loginId,
+          }));
 
       setUsers(mappedUsers);
     } catch (error) {
       console.error(error);
+
+      alert(
+        "사용자 목록 조회에 실패했습니다."
+      );
     } finally {
       setLoading(false);
     }
@@ -61,63 +128,92 @@ export function UserManagement() {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users
-    .filter(
-      (user) =>
-        user.name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        user.username
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
-
   /**
-   * 사용자 상태 WITHDRAWN 변경
+   * 사용자 삭제
    */
   const handleDeleteUser = async (
     id: number,
     name: string
   ) => {
-    if (
-      !confirm(`정말 "${name}" 사용자를 삭제하시겠습니까?`)
-    ) {
-      return;
-    }
+    const confirmed = confirm(
+      `정말 "${name}" 사용자를 삭제하시겠습니까?`
+    );
+
+    if (!confirmed) return;
 
     try {
+      const token =
+        localStorage.getItem("accessToken");
+
       const response = await fetch(
         `${API_BASE_URL}/api/v1/admin/users/${id}/status`,
         {
           method: "PATCH",
+
           headers: {
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "Content-Type":
+              "application/json",
+            "ngrok-skip-browser-warning":
+              "69420",
           },
+
           body: JSON.stringify({
-            status: "WITHDRAWN",
+            userStatus: "WITHDRAWN",
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("사용자 상태 변경 실패");
+        const errorText =
+          await response.text();
+
+        console.error(errorText);
+
+        throw new Error(
+          "사용자 삭제 실패"
+        );
       }
 
-      /**
-       * 목록 새로고침
-       */
       await fetchUsers();
 
-      alert("사용자가 삭제 처리되었습니다.");
+      alert(
+        "사용자가 삭제 처리되었습니다."
+      );
     } catch (error) {
       console.error(error);
+
       alert("사용자 삭제에 실패했습니다.");
     }
   };
 
-  // 첫 글자로 아바타 색상 결정
-  const getAvatarColor = (name: string) => {
+  /**
+   * 검색
+   */
+  const filteredUsers = users
+    .filter(
+      (user) =>
+        user.name
+          .toLowerCase()
+          .includes(
+            searchQuery.toLowerCase()
+          ) ||
+        user.username
+          .toLowerCase()
+          .includes(
+            searchQuery.toLowerCase()
+          )
+    )
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, "ko")
+    );
+
+  /**
+   * 아바타 색상
+   */
+  const getAvatarColor = (
+    name: string
+  ) => {
     const colors = [
       "bg-blue-500",
       "bg-green-500",
@@ -129,28 +225,39 @@ export function UserManagement() {
       "bg-teal-500",
     ];
 
-    const index = name.charCodeAt(0) % colors.length;
+    const index =
+      name.charCodeAt(0) % colors.length;
 
     return colors[index];
   };
 
+  /**
+   * 로딩
+   */
   if (loading) {
     return (
-      <div className="p-10 text-center">
-        사용자 목록 불러오는 중...
+      <div className="flex items-center justify-center py-20">
+        <div className="text-gray-500 text-lg">
+          사용자 목록 불러오는 중...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="max-w-7xl mx-auto px-6">
+      {/* 헤더 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           사용자 관리
         </h1>
+
+        <p className="text-gray-500">
+          전체 사용자 목록을 관리할 수 있습니다.
+        </p>
       </div>
 
-      {/* 검색 바 */}
+      {/* 검색 */}
       <div className="mb-6">
         <div className="relative max-w-md">
           <input
@@ -160,27 +267,27 @@ export function UserManagement() {
             onChange={(e) =>
               setSearchQuery(e.target.value)
             }
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         </div>
       </div>
 
-      {/* 사용자 테이블 */}
+      {/* 테이블 */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
                 사용자
               </th>
 
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
                 아이디
               </th>
 
-              <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">
                 작업
               </th>
             </tr>
@@ -191,9 +298,9 @@ export function UserManagement() {
               filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  className="hover:bg-gray-50"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-10 h-10 rounded-full ${getAvatarColor(
@@ -209,13 +316,13 @@ export function UserManagement() {
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="text-sm text-gray-600 font-mono">
                       {user.username}
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <td className="px-6 py-4 text-center">
                     <button
                       onClick={() =>
                         handleDeleteUser(
@@ -223,7 +330,7 @@ export function UserManagement() {
                           user.name
                         )
                       }
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
                     >
                       <Trash2 className="w-4 h-4" />
 
@@ -244,12 +351,6 @@ export function UserManagement() {
                     {searchQuery
                       ? "검색 결과가 없습니다"
                       : "등록된 사용자가 없습니다"}
-                  </p>
-
-                  <p className="text-gray-400 text-sm">
-                    {searchQuery
-                      ? "다른 검색어를 입력해보세요"
-                      : ""}
                   </p>
                 </td>
               </tr>
