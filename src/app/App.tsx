@@ -8,10 +8,9 @@ import { AuthModal } from "./components/AuthModal";
 
 function App() {
   const [activeTab, setActiveTab] = useState("home");
-
   const [user, setUser] = useState<{ name: string } | null>(null);
 
-  // 새로고침 시 로그인 유지
+  // 새로고침 로그인 유지
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     const savedUser = localStorage.getItem("user");
@@ -47,7 +46,7 @@ function App() {
     );
   }
 
-  // 로그인 성공 후
+  // 로그인 후 메인
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
@@ -60,11 +59,8 @@ function App() {
 
       <main className="py-8">
         {activeTab === "home" && <AdminHome />}
-
         {activeTab === "user-management" && <UserManagement />}
-
         {activeTab === "data-management" && <DataManagement />}
-
         {activeTab === "chatbot-management" && <ChatbotManagement />}
       </main>
     </div>

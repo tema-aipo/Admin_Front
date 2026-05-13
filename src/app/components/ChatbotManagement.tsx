@@ -169,48 +169,7 @@ export function ChatbotManagement() {
           챗봇 관리
         </h2>
       </div>
-
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {conversationStats.map((stat, index) => {
-          const Icon = stat.icon;
-
-          const colorClasses = {
-            blue: "bg-blue-50 text-blue-600",
-            green: "bg-green-50 text-green-600",
-            red: "bg-red-50 text-red-600",
-            purple: "bg-purple-50 text-purple-600",
-          };
-
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div
-                  className={`p-3 rounded-lg ${
-                    colorClasses[
-                      stat.color as keyof typeof colorClasses
-                    ]
-                  }`}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-              </div>
-
-              <div className="text-sm text-gray-600 mb-1">
-                {stat.label}
-              </div>
-
-              <div className="text-3xl font-bold text-gray-900">
-                {stat.value}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
+      
       {/* 대화 로그 및 분석 */}
       <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
@@ -252,11 +211,6 @@ export function ChatbotManagement() {
             <TabsTrigger value="low-rated">
               <ThumbsDown className="w-4 h-4 mr-2" />
               낮은 평가
-            </TabsTrigger>
-
-            <TabsTrigger value="categories">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              카테고리별
             </TabsTrigger>
           </TabsList>
 
@@ -347,13 +301,6 @@ export function ChatbotManagement() {
               <p className="text-gray-500">
                 낮은 평가 데이터가 없습니다.
               </p>
-            </div>
-          </TabsContent>
-
-          {/* 카테고리 */}
-          <TabsContent value="categories">
-            <div className="text-center py-12 text-gray-500">
-              카테고리 데이터 없음
             </div>
           </TabsContent>
         </Tabs>
