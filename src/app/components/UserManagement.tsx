@@ -255,10 +255,6 @@ export function UserManagement() {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           사용자 관리
         </h1>
-
-        <p className="text-gray-500">
-          전체 사용자 목록을 관리할 수 있습니다.
-        </p>
       </div>
 
       {/* 검색 */}

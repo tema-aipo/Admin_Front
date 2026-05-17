@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   ThumbsDown,
@@ -15,19 +15,6 @@ import {
   TabsTrigger,
 } from "./ui/tabs";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-
 import type {
   ConversationLog,
   QuestionCategory,
@@ -37,13 +24,17 @@ import type {
 const BASE_URL = "http://3.37.25.92:8080";
 
 interface ChatbotLogResponse {
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
   content: ChatbotLogItem[];
 }
 
 interface ChatbotLogItem {
   logId: number;
   sessionId: string;
-  messageRole: "USER" | "ASSISTANT";
+  messageRole: "USER" | "ASSISTANT" | "SYSTEM";
   content: string;
   tokenCount: number;
   createdAt: string;
@@ -65,61 +56,199 @@ export function ChatbotManagement() {
     satisfaction: 0,
   });
 
+  const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState("");
+
   /**
-   * 챗봇 로그 조회 API 연동
+   * 초기 로딩
    */
   useEffect(() => {
-    const fetchChatbotLogs = async () => {
-      try {
-        const response = await fetch(
-          `${BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=100`
-        );
-
-        if (!response.ok) {
-          throw new Error("로그 조회 실패");
-        }
-
-        const data: ChatbotLogResponse =
-          await response.json();
-
-        /**
-         * USER -> 질문
-         * ASSISTANT -> 답변
-         * 형태로 변환
-         */
-        const mappedLogs: ConversationLog[] = [];
-
-        for (let i = 0; i < data.content.length; i++) {
-          const current = data.content[i];
-          const next = data.content[i + 1];
-
-          if (
-            current.messageRole === "USER" &&
-            next &&
-            next.messageRole === "ASSISTANT" &&
-            current.sessionId === next.sessionId
-          ) {
-            mappedLogs.push({
-              id: current.logId,
-              userId: current.sessionId,
-              category: "일반",
-              question: current.content,
-              answer: next.content,
-              rating: "like",
-              timestamp: current.createdAt,
-            });
-          }
-        }
-
-        setConversationLogs(mappedLogs);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
     fetchChatbotLogs();
   }, []);
 
+  /**
+   * 챗봇 로그 조회
+   */
+  const fetchChatbotLogs = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      /**
+       * 저장된 JWT 토큰 가져오기
+       */
+      const accessToken =
+        localStorage.getItem("accessToken");
+
+      /**
+       * 토큰 없을 경우
+       */
+      if (!accessToken) {
+        throw new Error(
+          "로그인이 필요합니다."
+        );
+      }
+
+      const response = await fetch(
+        `${BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=200`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+
+            /**
+             * Authorization 헤더 추가
+             */
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      /**
+       * 인증 실패
+       */
+      if (response.status === 401) {
+        throw new Error(
+          "로그인이 만료되었습니다."
+        );
+      }
+
+      /**
+       * 권한 없음
+       */
+      if (response.status === 403) {
+        throw new Error(
+          "관리자 권한이 없습니다."
+        );
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "챗봇 로그 조회 실패"
+        );
+      }
+
+      const data: ChatbotLogResponse =
+        await response.json();
+
+      /**
+       * 시간순 정렬
+       */
+      const sortedLogs = [...data.content].sort(
+        (a, b) =>
+          new Date(a.createdAt).getTime() -
+          new Date(b.createdAt).getTime()
+      );
+
+      /**
+       * USER 질문 + ASSISTANT 답변 매칭
+       */
+      const mappedLogs: ConversationLog[] = [];
+
+      for (let i = 0; i < sortedLogs.length; i++) {
+        const current = sortedLogs[i];
+
+        /**
+         * USER 메시지만 사용
+         */
+        if (current.messageRole !== "USER") {
+          continue;
+        }
+
+        /**
+         * 같은 세션의 다음 ASSISTANT 찾기
+         */
+        const assistantMessage = sortedLogs.find(
+          (item, index) =>
+            index > i &&
+            item.sessionId === current.sessionId &&
+            item.messageRole === "ASSISTANT"
+        );
+
+        mappedLogs.push({
+          id: current.logId,
+          userId: current.sessionId,
+          category: "일반",
+          question: current.content,
+          answer:
+            assistantMessage?.content ||
+            "답변 없음",
+          rating: "like",
+          timestamp: current.createdAt,
+        });
+      }
+
+      /**
+       * 최신순 정렬
+       */
+      mappedLogs.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() -
+          new Date(a.timestamp).getTime()
+      );
+
+      setConversationLogs(mappedLogs);
+
+      /**
+       * 통계 계산
+       */
+      const likes = mappedLogs.filter(
+        (log) => log.rating === "like"
+      ).length;
+
+      const dislikes = mappedLogs.filter(
+        (log) => log.rating === "dislike"
+      ).length;
+
+      const total = mappedLogs.length;
+
+      const satisfaction =
+        total === 0
+          ? 0
+          : Math.round((likes / total) * 100);
+
+      setStats({
+        totalConversations: total,
+        likes,
+        dislikes,
+        satisfaction,
+      });
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "알 수 없는 오류"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * 낮은 평가 필터링
+   */
+  const lowRatedConversations =
+    conversationLogs.filter(
+      (log) => log.rating === "dislike"
+    );
+
+  /**
+   * 검색 필터링
+   */
+  const filteredLogs = useMemo(() => {
+    return conversationLogs.filter((log) =>
+      log.question
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    );
+  }, [conversationLogs, searchTerm]);
+
+  /**
+   * 통계 카드
+   */
   const conversationStats = [
     {
       label: "총 대화 수",
@@ -147,32 +276,50 @@ export function ChatbotManagement() {
     },
   ];
 
-  // 낮은 평가(싫어요) 필터링
-  const lowRatedConversations =
-    conversationLogs.filter(
-      (log) => log.rating === "dislike"
-    );
-
-  // 검색 필터링
-  const filteredLogs = conversationLogs.filter((log) =>
-    log.question
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="max-w-7xl mx-auto px-6">
       {/* 헤더 */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
           챗봇 관리
-        </h2>
+        </h1>
       </div>
-      
-      {/* 대화 로그 및 분석 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm">
+
+      {/* 통계 카드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {conversationStats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
+            <div
+              key={stat.label}
+              className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    {stat.label}
+                  </p>
+
+                  <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                    {stat.value}
+                  </h3>
+                </div>
+
+                <div className="p-3 rounded-xl bg-gray-100">
+                  <Icon className="w-5 h-5 text-gray-700" />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 로그 영역 */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+        {/* 제목 */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-purple-50 rounded-lg">
+          <div className="p-2 bg-purple-50 rounded-xl">
             <BarChart3 className="w-6 h-6 text-purple-600" />
           </div>
 
@@ -180,13 +327,17 @@ export function ChatbotManagement() {
             <h2 className="text-xl font-bold text-gray-900">
               대화 로그 및 분석
             </h2>
+
+            <p className="text-sm text-gray-500">
+              챗봇 질문 및 응답 내역
+            </p>
           </div>
         </div>
 
-        {/* 검색 필드 */}
+        {/* 검색 */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
 
             <input
               type="text"
@@ -195,114 +346,173 @@ export function ChatbotManagement() {
                 setSearchTerm(e.target.value)
               }
               placeholder="질문 내용 검색"
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
-        {/* 탭 */}
-        <Tabs defaultValue="all">
-          <TabsList className="grid grid-cols-3 mb-6">
-            <TabsTrigger value="all">
-              전체 로그
-            </TabsTrigger>
+        {/* 로딩 */}
+        {loading && (
+          <div className="py-20 text-center text-gray-500">
+            로딩 중...
+          </div>
+        )}
 
-            <TabsTrigger value="low-rated">
-              <ThumbsDown className="w-4 h-4 mr-2" />
-              낮은 평가
-            </TabsTrigger>
-          </TabsList>
+        {/* 에러 */}
+        {error && (
+          <div className="py-20 text-center text-red-500 font-medium">
+            {error}
+          </div>
+        )}
 
-          {/* 전체 대화 로그 */}
-          <TabsContent value="all">
-            {filteredLogs.length > 0 ? (
-              <div className="space-y-3">
-                {filteredLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-5 bg-gray-50 rounded-lg border border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-md transition-all duration-200"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                          {log.category}
-                        </span>
+        {/* 로그 */}
+        {!loading && !error && (
+          <Tabs defaultValue="all">
+            <TabsList className="grid grid-cols-2 mb-6">
+              <TabsTrigger value="all">
+                전체 로그
+              </TabsTrigger>
 
-                        {log.rating === "like" ? (
-                          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-100">
-                            <ThumbsUp className="w-3 h-3 text-green-600" />
+              <TabsTrigger value="low-rated">
+                <ThumbsDown className="w-4 h-4 mr-2" />
+                낮은 평가
+              </TabsTrigger>
+            </TabsList>
 
-                            <span className="text-xs font-medium text-green-700">
-                              좋아요
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-100">
-                            <ThumbsDown className="w-3 h-3 text-red-600" />
+            {/* 전체 로그 */}
+            <TabsContent value="all">
+              {filteredLogs.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-5 bg-gray-50 rounded-xl border border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                    >
+                      {/* 상단 */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                            {log.category}
+                          </span>
 
-                            <span className="text-xs font-medium text-red-700">
-                              싫어요
-                            </span>
-                          </div>
-                        )}
+                          {log.rating === "like" ? (
+                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-100">
+                              <ThumbsUp className="w-3 h-3 text-green-600" />
+
+                              <span className="text-xs font-medium text-green-700">
+                                좋아요
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100">
+                              <ThumbsDown className="w-3 h-3 text-red-600" />
+
+                              <span className="text-xs font-medium text-red-700">
+                                싫어요
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 시간 */}
+                        <div className="flex items-center gap-1 text-xs text-gray-500 whitespace-nowrap">
+                          <Clock className="w-3 h-3" />
+
+                          {new Date(
+                            log.timestamp
+                          ).toLocaleString("ko-KR", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="w-3 h-3" />
+                      {/* 질문 */}
+                      <div className="mb-3">
+                        <div className="flex gap-2">
+                          <span className="font-semibold text-gray-800">
+                            Q.
+                          </span>
 
-                        {new Date(
-                          log.timestamp
-                        ).toLocaleString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                          <p className="text-gray-900 leading-relaxed">
+                            {log.question}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 답변 */}
+                      <div>
+                        <div className="flex gap-2">
+                          <span className="font-semibold text-gray-800">
+                            A.
+                          </span>
+
+                          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {log.answer}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 세션 */}
+                      <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-400">
+                        Session ID : {log.userId}
                       </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center text-gray-500">
+                  검색 결과가 없습니다.
+                </div>
+              )}
+            </TabsContent>
 
-                    <div className="space-y-2">
-                      <div className="text-sm">
-                        <span className="font-semibold text-gray-700">
-                          Q.
-                        </span>
+            {/* 낮은 평가 */}
+            <TabsContent value="low-rated">
+              {lowRatedConversations.length > 0 ? (
+                <div className="space-y-4">
+                  {lowRatedConversations.map((log) => (
+                    <div
+                      key={log.id}
+                      className="p-5 bg-red-50 rounded-xl border border-red-200"
+                    >
+                      <div className="mb-3">
+                        <div className="font-semibold text-red-700 mb-1">
+                          질문
+                        </div>
 
-                        <span className="text-gray-900 ml-2">
+                        <p className="text-gray-800">
                           {log.question}
-                        </span>
+                        </p>
                       </div>
 
-                      <div className="text-sm">
-                        <span className="font-semibold text-gray-700">
-                          A.
-                        </span>
+                      <div>
+                        <div className="font-semibold text-red-700 mb-1">
+                          답변
+                        </div>
 
-                        <span className="text-gray-700 ml-2">
+                        <p className="text-gray-700 whitespace-pre-wrap">
                           {log.answer}
-                        </span>
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                데이터 없음
-              </div>
-            )}
-          </TabsContent>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-20 text-center">
+                  <ThumbsDown className="w-12 h-12 text-gray-300 mx-auto mb-3" />
 
-          {/* 낮은 평가 */}
-          <TabsContent value="low-rated">
-            <div className="text-center py-12">
-              <ThumbsDown className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-
-              <p className="text-gray-500">
-                낮은 평가 데이터가 없습니다.
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  <p className="text-gray-500">
+                    낮은 평가 데이터가 없습니다.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );

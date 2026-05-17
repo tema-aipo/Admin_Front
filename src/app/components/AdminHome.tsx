@@ -8,6 +8,9 @@ import type {
   FavoriteStock,
 } from "../../types";
 
+const BASE_URL =
+  "http://3.37.25.92:8080";
+
 interface DashboardStats {
   users: {
     total: number;
@@ -16,6 +19,7 @@ interface DashboardStats {
     withdrawn: number;
     newLast7Days: number;
   };
+
   chatbot: {
     totalMessages: number;
     totalSessions: number;
@@ -24,70 +28,151 @@ interface DashboardStats {
     weeklyMessages: number;
     weeklyTokens: number;
   };
+
   documents: {
     total: number;
     processing: number;
     failed: number;
   };
+
   pipeline: {
     running: number;
     failed: number;
   };
 }
 
+const defaultStats: DashboardStats = {
+  users: {
+    total: 0,
+    active: 0,
+    suspended: 0,
+    withdrawn: 0,
+    newLast7Days: 0,
+  },
+
+  chatbot: {
+    totalMessages: 0,
+    totalSessions: 0,
+    todayMessages: 0,
+    todaySessions: 0,
+    weeklyMessages: 0,
+    weeklyTokens: 0,
+  },
+
+  documents: {
+    total: 0,
+    processing: 0,
+    failed: 0,
+  },
+
+  pipeline: {
+    running: 0,
+    failed: 0,
+  },
+};
+
 export function AdminHome() {
   const [dashboardStats, setDashboardStats] =
-    useState<DashboardStats | null>(null);
+    useState<DashboardStats | null>(
+      null
+    );
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] =
+    useState(true);
 
-  // 공모주 조회 통계 (기존 유지)
-  const [ipoViewStats] = useState<IpoViewStats>({
-    totalViews: 0,
-    todayViews: 0,
-    yesterdayViews: 0,
-    weeklyGrowth: 0,
-  });
+  // 공모주 조회 통계
+  const [ipoViewStats] =
+    useState<IpoViewStats>({
+      totalViews: 0,
+      todayViews: 0,
+      yesterdayViews: 0,
+      weeklyGrowth: 0,
+    });
 
-  const [surgingStocks] = useState<SurgingStock[]>([]);
-  const [topSurgingStocks] = useState<TopSurgingStock[]>([]);
-  const [favoriteStocks] = useState<FavoriteStock[]>([]);
+  const [surgingStocks] = useState<
+    SurgingStock[]
+  >([]);
 
-  useEffect(() => {
-    const fetchDashboardStats = async () => {
+  const [topSurgingStocks] =
+    useState<TopSurgingStock[]>([]);
+
+  const [favoriteStocks] = useState<
+    FavoriteStock[]
+  >([]);
+
+  /**
+   * 대시보드 통계 조회
+   */
+  const fetchDashboardStats =
+    async () => {
       try {
         setLoading(true);
 
+        const token =
+          localStorage.getItem(
+            "accessToken"
+          );
+
+        if (!token) {
+          alert("로그인이 필요합니다.");
+          return;
+        }
+
         const response = await fetch(
-          "/api/v1/admin/dashboard/stats"
+          `${BASE_URL}/api/v1/admin/dashboard/stats`,
+          {
+            method: "GET",
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type":
+                "application/json",
+            },
+          }
         );
 
         if (!response.ok) {
+          const errorText =
+            await response.text();
+
+          console.error(errorText);
+
           throw new Error(
-            "Failed to fetch dashboard stats"
+            "대시보드 통계 조회 실패"
           );
         }
 
-        const data = await response.json();
+        const data: DashboardStats =
+          await response.json();
 
         setDashboardStats(data);
       } catch (error) {
-        console.error(
-          "Failed to fetch dashboard stats:",
-          error
+        console.error(error);
+
+        alert(
+          "대시보드 통계 조회에 실패했습니다."
         );
       } finally {
         setLoading(false);
       }
     };
 
+  useEffect(() => {
     fetchDashboardStats();
   }, []);
 
+  const stats =
+    dashboardStats ?? defaultStats;
+
+  /**
+   * 로딩
+   */
   if (loading) {
     return (
-      <div className="p-10 text-center text-gray-500">
-        불러오는 중...
+      <div className="flex items-center justify-center py-20">
+        <div className="text-gray-500 text-lg">
+          대시보드 불러오는 중...
+        </div>
       </div>
     );
   }
@@ -110,8 +195,8 @@ export function AdminHome() {
 
       {/* 상단 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
-        {/* 사용자 통계 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* 사용자 */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">
             사용자
           </h2>
@@ -121,9 +206,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 전체 회원
               </span>
+
               <span className="font-bold">
-                {dashboardStats?.users.total.toLocaleString() ??
-                  0}
+                {stats.users.total.toLocaleString()}
               </span>
             </div>
 
@@ -131,9 +216,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 활성 회원
               </span>
+
               <span className="font-bold text-green-600">
-                {dashboardStats?.users.active.toLocaleString() ??
-                  0}
+                {stats.users.active.toLocaleString()}
               </span>
             </div>
 
@@ -141,9 +226,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 정지 회원
               </span>
+
               <span className="font-bold text-red-500">
-                {dashboardStats?.users.suspended.toLocaleString() ??
-                  0}
+                {stats.users.suspended.toLocaleString()}
               </span>
             </div>
 
@@ -151,9 +236,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 탈퇴 회원
               </span>
+
               <span className="font-bold">
-                {dashboardStats?.users.withdrawn.toLocaleString() ??
-                  0}
+                {stats.users.withdrawn.toLocaleString()}
               </span>
             </div>
 
@@ -161,17 +246,17 @@ export function AdminHome() {
               <span className="text-gray-600">
                 최근 7일 가입
               </span>
+
               <span className="font-bold text-blue-600">
                 +
-                {dashboardStats?.users.newLast7Days.toLocaleString() ??
-                  0}
+                {stats.users.newLast7Days.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
 
-        {/* 챗봇 통계 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* 챗봇 */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">
             챗봇
           </h2>
@@ -181,9 +266,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 전체 메시지
               </span>
+
               <span className="font-bold">
-                {dashboardStats?.chatbot.totalMessages.toLocaleString() ??
-                  0}
+                {stats.chatbot.totalMessages.toLocaleString()}
               </span>
             </div>
 
@@ -191,9 +276,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 전체 세션
               </span>
+
               <span className="font-bold">
-                {dashboardStats?.chatbot.totalSessions.toLocaleString() ??
-                  0}
+                {stats.chatbot.totalSessions.toLocaleString()}
               </span>
             </div>
 
@@ -201,9 +286,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 오늘 메시지
               </span>
+
               <span className="font-bold text-blue-600">
-                {dashboardStats?.chatbot.todayMessages.toLocaleString() ??
-                  0}
+                {stats.chatbot.todayMessages.toLocaleString()}
               </span>
             </div>
 
@@ -211,9 +296,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 오늘 세션
               </span>
+
               <span className="font-bold text-green-600">
-                {dashboardStats?.chatbot.todaySessions.toLocaleString() ??
-                  0}
+                {stats.chatbot.todaySessions.toLocaleString()}
               </span>
             </div>
 
@@ -221,9 +306,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 주간 메시지
               </span>
+
               <span className="font-bold text-orange-600">
-                {dashboardStats?.chatbot.weeklyMessages.toLocaleString() ??
-                  0}
+                {stats.chatbot.weeklyMessages.toLocaleString()}
               </span>
             </div>
 
@@ -231,21 +316,20 @@ export function AdminHome() {
               <span className="text-gray-600">
                 주간 토큰
               </span>
+
               <span className="font-bold text-purple-600">
-                {dashboardStats?.chatbot.weeklyTokens.toLocaleString() ??
-                  0}
+                {stats.chatbot.weeklyTokens.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
 
-        {/* 문서 통계 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        {/* 문서 */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">
               문서 처리
             </h2>
-
             <Database className="w-5 h-5 text-green-600" />
           </div>
 
@@ -254,9 +338,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 전체 문서
               </span>
+
               <span className="font-bold">
-                {dashboardStats?.documents.total.toLocaleString() ??
-                  0}
+                {stats.documents.total.toLocaleString()}
               </span>
             </div>
 
@@ -264,9 +348,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 처리중
               </span>
+
               <span className="font-bold text-yellow-500">
-                {dashboardStats?.documents.processing.toLocaleString() ??
-                  0}
+                {stats.documents.processing.toLocaleString()}
               </span>
             </div>
 
@@ -274,16 +358,16 @@ export function AdminHome() {
               <span className="text-gray-600">
                 실패
               </span>
+
               <span className="font-bold text-red-500">
-                {dashboardStats?.documents.failed.toLocaleString() ??
-                  0}
+                {stats.documents.failed.toLocaleString()}
               </span>
             </div>
           </div>
         </div>
 
         {/* 파이프라인 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">
             파이프라인
           </h2>
@@ -293,9 +377,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 실행중
               </span>
+
               <span className="font-bold text-green-600">
-                {dashboardStats?.pipeline.running.toLocaleString() ??
-                  0}
+                {stats.pipeline.running.toLocaleString()}
               </span>
             </div>
 
@@ -303,9 +387,9 @@ export function AdminHome() {
               <span className="text-gray-600">
                 실패
               </span>
+
               <span className="font-bold text-red-500">
-                {dashboardStats?.pipeline.failed.toLocaleString() ??
-                  0}
+                {stats.pipeline.failed.toLocaleString()}
               </span>
             </div>
           </div>
@@ -340,7 +424,7 @@ export function AdminHome() {
             <div className="space-y-3">
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600">
-                  오늘 조회
+                  오늘 조회 수
                 </span>
 
                 <span className="text-lg font-semibold text-gray-900">
@@ -350,21 +434,10 @@ export function AdminHome() {
 
               <div className="flex items-center justify-between py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-600">
-                  어제 조회
+                  최근 7일 조회 수
                 </span>
-
                 <span className="text-sm font-medium text-gray-700">
                   {ipoViewStats.yesterdayViews.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-gray-600">
-                  주간 성장률
-                </span>
-
-                <span className="text-sm font-semibold text-green-600">
-                  +{ipoViewStats.weeklyGrowth}%
                 </span>
               </div>
             </div>
@@ -374,46 +447,11 @@ export function AdminHome() {
         {/* 조회 급증 종목 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            조회 급증 종목 (최근 1시간)
+            조회 급증 종목
           </h2>
 
-          <div className="space-y-2">
-            <div className="text-xs font-semibold text-gray-500 mb-2">
-              급증 Top 3
-            </div>
-
-            {topSurgingStocks.length > 0 ? (
-              topSurgingStocks.map((stock) => (
-                <div
-                  key={stock.code}
-                  className="flex items-center justify-between py-2 px-3 bg-red-50 rounded-lg"
-                >
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {stock.name}
-                    </div>
-
-                    <div className="text-xs text-gray-500">
-                      {stock.code}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {stock.views}회
-                    </div>
-
-                    <div className="text-xs font-medium text-red-600">
-                      {stock.growth}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-4 text-gray-500 text-sm">
-                데이터 없음
-              </div>
-            )}
+          <div className="text-center py-4 text-gray-500 text-sm">
+            데이터 없음
           </div>
         </div>
 
@@ -423,65 +461,8 @@ export function AdminHome() {
             관심 종목 Top 5
           </h2>
 
-          <div className="space-y-1">
-            {favoriteStocks.length > 0 ? (
-              favoriteStocks
-                .slice(0, 5)
-                .map((stock) => (
-                  <div
-                    key={stock.code}
-                    className={`flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 transition-colors ${
-                      stock.rank < 4
-                        ? "bg-yellow-50"
-                        : ""
-                    }`}
-                  >
-                    <div
-                      className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                        stock.rank === 1
-                          ? "bg-yellow-400 text-white"
-                          : stock.rank === 2
-                            ? "bg-gray-300 text-white"
-                            : stock.rank === 3
-                              ? "bg-amber-600 text-white"
-                              : "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {stock.rank}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">
-                        {stock.name}
-                      </div>
-
-                      <div className="text-xs text-gray-500">
-                        {stock.code}
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {stock.count.toLocaleString()}
-                      </div>
-
-                      <div
-                        className={`text-xs font-medium ${
-                          stock.change.startsWith("+")
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {stock.change}
-                      </div>
-                    </div>
-                  </div>
-                ))
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                데이터 없음
-              </div>
-            )}
+          <div className="text-center py-8 text-gray-500">
+            데이터 없음
           </div>
         </div>
       </div>
