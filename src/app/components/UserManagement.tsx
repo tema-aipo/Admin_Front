@@ -7,13 +7,13 @@ import {
 
 import type { User } from "../../types";
 
-const API_BASE_URL =
-  "https://oval-zigzagged-umbrella.ngrok-free.dev";
+const BASE_URL = "http://3.37.25.92:8080";
 
 interface UserApiResponse {
   userId: number;
   loginId: string;
   userName: string;
+  email: string;
 
   userStatus:
     | "ACTIVE"
@@ -62,7 +62,7 @@ export function UserManagement() {
       }
 
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/admin/users?page=0&size=20`,
+        `${BASE_URL}/api/v1/admin/users?page=0&size=20`,
         {
           method: "GET",
 
@@ -70,8 +70,6 @@ export function UserManagement() {
             Authorization: `Bearer ${token}`,
             "Content-Type":
               "application/json",
-            "ngrok-skip-browser-warning":
-              "69420",
           },
         }
       );
@@ -110,6 +108,7 @@ export function UserManagement() {
             id: user.userId,
             name: user.userName,
             username: user.loginId,
+            email: user.email,
           }));
 
       setUsers(mappedUsers);
@@ -146,7 +145,7 @@ export function UserManagement() {
         localStorage.getItem("accessToken");
 
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/admin/users/${id}/status`,
+        `${BASE_URL}/api/v1/admin/users/${id}/status`,
         {
           method: "PATCH",
 
@@ -199,6 +198,11 @@ export function UserManagement() {
             searchQuery.toLowerCase()
           ) ||
         user.username
+          .toLowerCase()
+          .includes(
+            searchQuery.toLowerCase()
+          ) ||
+        user.email
           .toLowerCase()
           .includes(
             searchQuery.toLowerCase()
@@ -262,7 +266,7 @@ export function UserManagement() {
         <div className="relative max-w-md">
           <input
             type="text"
-            placeholder="사용자 이름 또는 아이디 검색"
+            placeholder="사용자 이름 / 아이디 / 이메일 검색"
             value={searchQuery}
             onChange={(e) =>
               setSearchQuery(e.target.value)
@@ -285,6 +289,10 @@ export function UserManagement() {
 
               <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
                 아이디
+              </th>
+
+              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">
+                이메일
               </th>
 
               <th className="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">
@@ -322,6 +330,12 @@ export function UserManagement() {
                     </div>
                   </td>
 
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-600">
+                      {user.email}
+                    </div>
+                  </td>
+
                   <td className="px-6 py-4 text-center">
                     <button
                       onClick={() =>
@@ -342,7 +356,7 @@ export function UserManagement() {
             ) : (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={4}
                   className="px-6 py-16 text-center"
                 >
                   <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />

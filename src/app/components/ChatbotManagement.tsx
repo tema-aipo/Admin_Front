@@ -34,8 +34,7 @@ import type {
   ChatbotStats,
 } from "../../types";
 
-const API_BASE_URL =
-  "https://oval-zigzagged-umbrella.ngrok-free.dev";
+const BASE_URL = "http://3.37.25.92:8080";
 
 interface ChatbotLogResponse {
   content: ChatbotLogItem[];
@@ -73,7 +72,7 @@ export function ChatbotManagement() {
     const fetchChatbotLogs = async () => {
       try {
         const response = await fetch(
-          `${API_BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=100`
+          `${BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=100`
         );
 
         if (!response.ok) {
