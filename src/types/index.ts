@@ -70,8 +70,7 @@ export interface RagStockStats {
 export interface IpoViewStats {
   totalViews: number;
   todayViews: number;
-  yesterdayViews: number;
-  weeklyGrowth: number;
+  weeklyViews: number;
 }
 
 export interface SurgingStock {

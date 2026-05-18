@@ -61,6 +61,28 @@ export function ChatbotManagement() {
   const [error, setError] = useState("");
 
   /**
+   * 아이콘 색상
+   */
+  const iconColors = {
+    blue: {
+      bg: "bg-blue-100",
+      text: "text-blue-600",
+    },
+    green: {
+      bg: "bg-green-100",
+      text: "text-green-600",
+    },
+    red: {
+      bg: "bg-red-100",
+      text: "text-red-600",
+    },
+    purple: {
+      bg: "bg-purple-100",
+      text: "text-purple-600",
+    },
+  };
+
+  /**
    * 초기 로딩
    */
   useEffect(() => {
@@ -290,6 +312,11 @@ export function ChatbotManagement() {
         {conversationStats.map((stat) => {
           const Icon = stat.icon;
 
+          const colors =
+            iconColors[
+              stat.color as keyof typeof iconColors
+            ];
+
           return (
             <div
               key={stat.label}
@@ -306,8 +333,12 @@ export function ChatbotManagement() {
                   </h3>
                 </div>
 
-                <div className="p-3 rounded-xl bg-gray-100">
-                  <Icon className="w-5 h-5 text-gray-700" />
+                <div
+                  className={`p-3 rounded-xl ${colors.bg}`}
+                >
+                  <Icon
+                    className={`w-5 h-5 ${colors.text}`}
+                  />
                 </div>
               </div>
             </div>
