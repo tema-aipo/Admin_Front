@@ -13,6 +13,10 @@ import {
   Cpu,
   CornerDownRight,
   MinusCircle,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight,
 } from "lucide-react";
 
 const BASE_URL = "http://3.37.25.92:8080";
@@ -104,7 +108,7 @@ interface PipelineJobListResponse {
 }
 
 export function DataManagement() {
-  const [selectedTab, setSelectedTab] = useState("파이프라인");
+  const [selectedTab, setSelectedTab] = useState("시스템 상태");
 
   /**
    * 파이프라인 상태 관리
@@ -414,7 +418,7 @@ export function DataManagement() {
     fetchPipelineJobs(newPage, statusFilter);
   };
 
-  const tabs = ["파이프라인", "시스템 상태", "로그인 로그", "참고 문서"];
+  const tabs = ["시스템 상태", "로그인 로그", "파이프라인", "참고 문서"];
 
   const handleUploadReference = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -548,7 +552,7 @@ export function DataManagement() {
           {/* 실시간 파이프라인 상태 현황 요약 카드 (전체 너비로 확장) */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-600">파이프라인 작업 인프라 상태 요약</h3>
+              <h3 className="text-sm font-semibold text-black">파이프라인 작업 상태 요약</h3>
               <button 
                 onClick={() => { fetchPipelineStatus(); fetchPipelineJobs(0, statusFilter); }} 
                 className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
@@ -583,9 +587,9 @@ export function DataManagement() {
           {/* 하단: 필터 및 작업 내역 테이블 */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
-              <h3 className="font-semibold text-gray-900">파이프라인 작업 내역</h3>
+              <h3 className="font-semibold text-black">파이프라인 작업 내역</h3>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">상태 필터:</span>
+                <span className="text-xs text-black">상태 필터:</span>
                 <select 
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -606,7 +610,7 @@ export function DataManagement() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <thead className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-black uppercase tracking-wider">
                     <tr>
                       <th className="px-6 py-3">Job ID</th>
                       <th className="px-6 py-3">문서명 (Doc ID)</th>
@@ -690,38 +694,81 @@ export function DataManagement() {
                   <p className="text-xs text-gray-600">
                     총 <span className="font-semibold">{pipelineTotalPages}</span> 페이지 중 <span className="font-semibold">{pipelinePage + 1}</span> 페이지
                   </p>
-                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm bg-white" aria-label="Pagination">
+                  <nav
+                    className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                    aria-label="Pagination"
+                  >
+                    {/* 맨 처음 */}
+                    <button
+                      onClick={() => handlePipelinePageChange(0)}
+                      disabled={pipelinePage === 0}
+                      className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      <ChevronsLeft className="w-4 h-4" />
+                    </button>
+
+                    {/* 이전 */}
                     <button
                       onClick={() => handlePipelinePageChange(pipelinePage - 1)}
                       disabled={pipelinePage === 0}
-                      className="inline-flex items-center rounded-l-md border border-gray-300 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                      className="relative inline-flex items-center border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                     >
-                      이전
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                    {Array.from({ length: pipelineTotalPages }, (_, i) => i).map((pIdx) => {
-                      if (Math.abs(pipelinePage - pIdx) < 3) {
-                        return (
-                          <button
-                            key={pIdx}
-                            onClick={() => handlePipelinePageChange(pIdx)}
-                            className={`border px-3 py-1 text-xs font-medium ${
-                              pipelinePage === pIdx
-                                ? "bg-blue-50 border-blue-500 text-blue-600 z-10"
-                                : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                            }`}
-                          >
-                            {pIdx + 1}
-                          </button>
-                        );
+
+                    {(() => {
+                      let startPage = Math.max(0, pipelinePage - 1);
+                      let endPage = Math.min(
+                        pipelineTotalPages - 1,
+                        pipelinePage + 1
+                      );
+
+                      // 첫 페이지
+                      if (pipelinePage === 0) {
+                        endPage = Math.min(2, pipelineTotalPages - 1);
                       }
-                      return null;
-                    })}
+
+                      // 마지막 페이지
+                      if (pipelinePage === pipelineTotalPages - 1) {
+                        startPage = Math.max(0, pipelineTotalPages - 3);
+                      }
+
+                      return Array.from(
+                        { length: endPage - startPage + 1 },
+                        (_, i) => startPage + i
+                      ).map((pageIdx) => (
+                        <button
+                          key={pageIdx}
+                          onClick={() => handlePipelinePageChange(pageIdx)}
+                          className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                            pipelinePage === pageIdx
+                              ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                              : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          {pageIdx + 1}
+                        </button>
+                      ));
+                    })()}
+
+                    {/* 다음 */}
                     <button
                       onClick={() => handlePipelinePageChange(pipelinePage + 1)}
                       disabled={pipelinePage === pipelineTotalPages - 1}
-                      className="inline-flex items-center rounded-r-md border border-gray-300 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                      className="relative inline-flex items-center border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                     >
-                      다음
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                    {/* 맨 끝 */}
+                    <button
+                      onClick={() =>
+                        handlePipelinePageChange(pipelineTotalPages - 1)
+                      }
+                      disabled={pipelinePage === pipelineTotalPages - 1}
+                      className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                    >
+                      <ChevronsRight className="w-4 h-4" />
                     </button>
                   </nav>
                 </div>
@@ -735,7 +782,7 @@ export function DataManagement() {
       {selectedTab === "시스템 상태" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-900">서버 인프라 상태 및 가동 요약</h3>
+            <h3 className="text-lg font-semibold text-black">서버 상태 및 가동 요약</h3>
             <button 
               onClick={fetchSystemStatus}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
@@ -823,7 +870,7 @@ export function DataManagement() {
                     {formatUptime(systemStatus.uptimeMs)}
                   </div>
                   <p className="text-xs text-gray-400">
-                    서버 인스턴스가 실행된 이후 경과된 총 시간입니다.
+                    서버 인스턴스가 실행된 이후 경과된 총 시간
                   </p>
                 </div>
               </div>
@@ -840,7 +887,7 @@ export function DataManagement() {
       {selectedTab === "로그인 로그" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold text-gray-900">최근 로그인 내역</h3>
+            <h3 className="text-lg font-semibold text-black">최근 로그인 내역</h3>
             <button 
               onClick={() => fetchLoginLogs(currentPage)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
@@ -860,10 +907,10 @@ export function DataManagement() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">로그 ID</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">로그인 ID</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">권한 (Role)</th>
-                      <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">로그인 일시</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-black uppercase tracking-wider">로그 ID</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-black uppercase tracking-wider">로그인 ID</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-black uppercase tracking-wider">권한 (Role)</th>
+                      <th className="px-6 py-3 text-xs font-semibold text-black uppercase tracking-wider">로그인 일시</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
@@ -916,40 +963,74 @@ export function DataManagement() {
                       </p>
                     </div>
                     <div>
-                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                      <nav
+                        className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                        aria-label="Pagination"
+                      >
+                        {/* 맨 처음 */}
                         <button
-                          onClick={() => handlePageChange(currentPage - 1)}
+                          onClick={() => handlePageChange(0)}
                           disabled={currentPage === 0}
                           className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                         >
-                          이전
+                          <ChevronsLeft className="w-4 h-4" />
                         </button>
-                        
-                        {Array.from({ length: totalPages }, (_, i) => i).map((pageIdx) => {
-                          if (Math.abs(currentPage - pageIdx) < 3) {
-                            return (
-                              <button
-                                key={pageIdx}
-                                onClick={() => handlePageChange(pageIdx)}
-                                className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
-                                  currentPage === pageIdx
-                                    ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                                    : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                                }`}
-                              >
-                                {pageIdx + 1}
-                              </button>
-                            );
-                          }
-                          return null;
-                        })}
 
+                        {/* 이전 */}
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 0}
+                          className="relative inline-flex items-center border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {(() => {
+                          let startPage = Math.max(0, currentPage - 1);
+                          let endPage = Math.min(totalPages - 1, currentPage + 1);
+
+                          if (currentPage === 0) {
+                            endPage = Math.min(2, totalPages - 1);
+                          }
+
+                          if (currentPage === totalPages - 1) {
+                            startPage = Math.max(0, totalPages - 3);
+                          }
+
+                          return Array.from(
+                            { length: endPage - startPage + 1 },
+                            (_, i) => startPage + i
+                          ).map((pageIdx) => (
+                            <button
+                              key={pageIdx}
+                              onClick={() => handlePageChange(pageIdx)}
+                              className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium focus:z-20 ${
+                                currentPage === pageIdx
+                                  ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                                  : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                              }`}
+                            >
+                              {pageIdx + 1}
+                            </button>
+                          ));
+                        })()}
+
+                        {/* 다음 */}
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages - 1}
+                          className="relative inline-flex items-center border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-30"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+
+                        {/* 맨 끝 */}
+                        <button
+                          onClick={() => handlePageChange(totalPages - 1)}
+                          disabled={currentPage === totalPages - 1}
                           className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-30"
                         >
-                          다음
+                          <ChevronsRight className="w-4 h-4" />
                         </button>
                       </nav>
                     </div>
@@ -965,7 +1046,7 @@ export function DataManagement() {
       {selectedTab === "참고 문서" && (
         <div className="space-y-6">
           <div className="flex items-center justify-between border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">RAG 참고 문서 관리</h3>
+            <h3 className="text-lg font-semibold text-black">RAG 참고 문서 관리</h3>
             
             <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm font-medium">
               <Plus className="w-4 h-4" />

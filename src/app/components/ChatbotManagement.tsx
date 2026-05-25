@@ -405,7 +405,7 @@ export function ChatbotManagement() {
               </TabsTrigger>
 
               <TabsTrigger value="low-rated">
-                <ThumbsDown className="w-4 h-4 mr-2" />
+                <ThumbsDown className="w-4 h-4" />
                 낮은 평가
               </TabsTrigger>
             </TabsList>

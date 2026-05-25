@@ -46,6 +46,21 @@ interface DashboardStats {
   };
 }
 
+// API 스키마에 맞춘 공모주 통계 인터페이스 정의
+interface IpoStatsResponse {
+  viewStats: IpoViewStats;
+  trendingIpos: Array<{
+    ipoId: number;
+    stockName: string;
+    viewCount: number;
+  }>;
+  topFavoriteIpos: Array<{
+    ipoId: number;
+    stockName: string;
+    favoriteCount: number;
+  }>;
+}
+
 const defaultStats: DashboardStats = {
   users: { total: 0, active: 0, suspended: 0, withdrawn: 0, newLast7Days: 0 },
   chatbot: { totalMessages: 0, totalSessions: 0, todayMessages: 0, todaySessions: 0, weeklyMessages: 0, weeklyTokens: 0 },
@@ -53,25 +68,21 @@ const defaultStats: DashboardStats = {
   pipeline: { running: 0, failed: 0 },
 };
 
+const defaultIpoStats: IpoStatsResponse = {
+  viewStats: { totalViews: 0, todayViews: 0, weeklyViews: 0 },
+  trendingIpos: [],
+  topFavoriteIpos: [],
+};
+
 export function AdminHome() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [ipoStats, setIpoStats] = useState<IpoStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 공모주 조회 통계
-  const [ipoViewStats] = useState<IpoViewStats>({
-    totalViews: 0,
-    todayViews: 0,
-    weeklyViews: 0,
-  });
-
-  const [surgingStocks] = useState<SurgingStock[]>([]);
-  const [topSurgingStocks] = useState<TopSurgingStock[]>([]);
-  const [favoriteStocks] = useState<FavoriteStock[]>([]);
-
   /**
-   * 대시보드 통계 조회
+   * 대시보드 및 공모주 통계 통합 조회
    */
-  const fetchDashboardStats = async () => {
+  const fetchAllDashboardData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
@@ -81,22 +92,26 @@ export function AdminHome() {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/api/v1/admin/dashboard/stats`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(errorText);
-        throw new Error("대시보드 통계 조회 실패");
+      // 두 API를 병렬로 호출하여 성능 최적화
+      const [statsRes, ipoRes] = await Promise.all([
+        fetch(`${BASE_URL}/api/v1/admin/dashboard/stats`, { method: "GET", headers }),
+        fetch(`${BASE_URL}/api/v1/admin/dashboard/ipo-stats`, { method: "GET", headers })
+      ]);
+
+      if (!statsRes.ok || !ipoRes.ok) {
+        throw new Error("데이터 로드 중 오류가 발생했습니다.");
       }
 
-      const data: DashboardStats = await response.json();
-      setDashboardStats(data);
+      const statsData: DashboardStats = await statsRes.json();
+      const ipoData: IpoStatsResponse = await ipoRes.json();
+
+      setDashboardStats(statsData);
+      setIpoStats(ipoData);
     } catch (error) {
       console.error(error);
       alert("대시보드 통계 조회에 실패했습니다.");
@@ -106,10 +121,11 @@ export function AdminHome() {
   };
 
   useEffect(() => {
-    fetchDashboardStats();
+    fetchAllDashboardData();
   }, []);
 
   const stats = dashboardStats ?? defaultStats;
+  const ipoData = ipoStats ?? defaultIpoStats;
 
   if (loading) {
     return (
@@ -134,7 +150,7 @@ export function AdminHome() {
       {/* 서비스 현황 타이틀 */}
       <div className="mb-5 flex items-center gap-2">
         <Activity className="w-5 h-5 text-blue-600" />
-        <p className="font-semibold text-gray-700">서비스 현황 통계</p>
+        <p className="font-semibold text-black">서비스 현황 통계</p>
       </div>
 
       {/* 상단 통계 카드 */}
@@ -252,7 +268,7 @@ export function AdminHome() {
       {/* 공모주 통계 섹션 타이틀 */}
       <div className="mb-5 flex items-center gap-2">
         <CalendarDays className="w-5 h-5 text-blue-600" />
-        <p className="font-semibold text-gray-700">공모주 조회 통계</p>
+        <p className="font-semibold text-black">공모주 조회 통계</p>
       </div>
 
       {/* 하단 통계 그리드 영역 */}
@@ -269,7 +285,7 @@ export function AdminHome() {
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="text-sm text-blue-600 mb-1">전체 조회 수</div>
               <div className="text-3xl font-bold text-blue-900">
-                {ipoViewStats.totalViews.toLocaleString()}
+                {ipoData.viewStats.totalViews.toLocaleString()}
               </div>
             </div>
 
@@ -277,14 +293,14 @@ export function AdminHome() {
               <div className="flex items-center justify-between py-2 border-b border-gray-100 text-sm">
                 <span className="text-gray-600">오늘 조회 수</span>
                 <span className="text-lg font-semibold text-gray-900">
-                  {ipoViewStats.todayViews.toLocaleString()}
+                  {ipoData.viewStats.todayViews.toLocaleString()}
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-2 text-sm">
                 <span className="text-gray-600">최근 7일 조회 수</span>
                 <span className="font-medium text-gray-700">
-                  {ipoViewStats.weeklyViews.toLocaleString()}
+                  {ipoData.viewStats.weeklyViews.toLocaleString()}
                 </span>
               </div>
             </div>
@@ -297,20 +313,48 @@ export function AdminHome() {
             <h2 className="text-lg font-semibold text-gray-900">조회 급증 종목</h2>
             <TrendingUp className="w-5 h-5 text-red-500" />
           </div>
-          <div className="text-center py-12 text-gray-500 text-sm">
-            데이터 없음
-          </div>
+          {ipoData.trendingIpos.length > 0 ? (
+            <ul className="divide-y divide-gray-100">
+              {ipoData.trendingIpos.map((item, idx) => (
+                <li key={item.ipoId || idx} className="flex justify-between items-center py-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-gray-400 w-4">{idx + 1}</span>
+                    <span className="text-gray-800 font-medium">{item.stockName}</span>
+                  </div>
+                  <span className="text-gray-500 text-xs">{item.viewCount.toLocaleString()} 회 조회</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-12 text-gray-500 text-sm">
+              데이터 없음
+            </div>
+          )}
         </div>
 
-        {/* 관심 종목 Top5 */}
+        {/* 관심 종목 Top 5 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">관심 종목 Top 5</h2>
             <Heart className="w-5 h-5 text-pink-500 fill-pink-50" />
           </div>
-          <div className="text-center py-12 text-gray-500 text-sm">
-            데이터 없음
-          </div>
+          {ipoData.topFavoriteIpos.length > 0 ? (
+            <ul className="divide-y divide-gray-100">
+              {ipoData.topFavoriteIpos.slice(0, 5).map((item, idx) => (
+                <li key={item.ipoId || idx} className="flex justify-between items-center py-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-pink-400 w-4">{idx + 1}</span>
+                    <span className="text-gray-800 font-medium">{item.stockName}</span>
+                  </div>
+                  <span className="text-gray-500 text-xs">하트 {item.favoriteCount.toLocaleString()}개</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="text-center py-12 text-gray-500 text-sm">
+              데이터 없음
+            </div>
+          )}
         </div>
 
       </div>

@@ -29,15 +29,16 @@ function App() {
 
   /**
    * 로그인 유지
+   * sessionStorage 사용
    */
   useEffect(() => {
     const token =
-      localStorage.getItem(
+      sessionStorage.getItem(
         "accessToken"
       );
 
     const savedUser =
-      localStorage.getItem("user");
+      sessionStorage.getItem("user");
 
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
@@ -56,7 +57,10 @@ function App() {
   ) => {
     setUser(userData);
 
-    localStorage.setItem(
+    /**
+     * 유저 정보 저장
+     */
+    sessionStorage.setItem(
       "user",
       JSON.stringify(userData)
     );
@@ -68,7 +72,7 @@ function App() {
   const handleLogout = async () => {
     try {
       const accessToken =
-        localStorage.getItem(
+        sessionStorage.getItem(
           "accessToken"
         );
 
@@ -91,17 +95,15 @@ function App() {
       /**
        * 프론트 인증 제거
        */
-      localStorage.removeItem(
+      sessionStorage.removeItem(
         "accessToken"
       );
 
-      localStorage.removeItem(
+      sessionStorage.removeItem(
         "refreshToken"
       );
 
-      localStorage.removeItem("user");
-
-      sessionStorage.clear();
+      sessionStorage.removeItem("user");
 
       setUser(null);
     }
