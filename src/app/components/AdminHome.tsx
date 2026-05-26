@@ -171,7 +171,7 @@ export function AdminHome() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">활성 회원</span>
               <span className="font-bold text-green-600">{stats.users.active.toLocaleString()}</span>
-            </div>``
+            </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">탈퇴 회원</span>
               <span className="font-bold text-gray-700">{stats.users.withdrawn.toLocaleString()}</span>
