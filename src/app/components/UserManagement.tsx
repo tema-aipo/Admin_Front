@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import {
   Search,
-  Ban,
   AlertCircle,
   X,
   ChevronsLeft,
@@ -189,49 +188,6 @@ export function UserManagement() {
   };
 
   /**
-   * 사용자 정지
-   */
-  const handleSuspendUser = async (id: number, name: string) => {
-    const confirmed = confirm(
-      `정말 "${name}" 사용자를 정지하시겠습니까?`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      const token = localStorage.getItem("accessToken");
-
-      const response = await fetch(
-        `${BASE_URL}/api/v1/admin/users/${id}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            "ngrok-skip-browser-warning": "69420",
-          },
-          body: JSON.stringify({
-            userStatus: "SUSPENDED",
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(errorText);
-        throw new Error("사용자 정지 실패");
-      }
-
-      await fetchUsers(currentPage);
-
-      alert("사용자가 정지 처리되었습니다.");
-    } catch (error) {
-      console.error(error);
-      alert("사용자 정지에 실패했습니다.");
-    }
-  };
-
-  /**
    * 검색 및 정렬
    */
   const filteredUsers = users
@@ -315,10 +271,6 @@ export function UserManagement() {
               <th className="px-6 py-4 text-left text-xs font-semibold text-black uppercase">
                 마지막 로그인
               </th>
-
-              <th className="px-6 py-4 text-center text-xs font-semibold text-black uppercase">
-                작업
-              </th>
             </tr>
           </thead>
 
@@ -390,20 +342,6 @@ export function UserManagement() {
                     <div className="text-xs text-gray-500">
                       {formatDate(user.lastLoginAt)}
                     </div>
-                  </td>
-
-                  {/* 작업 */}
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSuspendUser(user.id, user.name);
-                      }}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                    >
-                      <Ban className="w-4 h-4" />
-                      <span>정지</span>
-                    </button>
                   </td>
                 </tr>
               ))

@@ -399,17 +399,6 @@ export function ChatbotManagement() {
         {/* 로그 */}
         {!loading && !error && (
           <Tabs defaultValue="all">
-            <TabsList className="grid grid-cols-2 mb-6">
-              <TabsTrigger value="all">
-                전체 로그
-              </TabsTrigger>
-
-              <TabsTrigger value="low-rated">
-                <ThumbsDown className="w-4 h-4" />
-                낮은 평가
-              </TabsTrigger>
-            </TabsList>
-
             {/* 전체 로그 */}
             <TabsContent value="all">
               {filteredLogs.length > 0 ? (
@@ -497,48 +486,6 @@ export function ChatbotManagement() {
               ) : (
                 <div className="py-20 text-center text-gray-500">
                   검색 결과가 없습니다.
-                </div>
-              )}
-            </TabsContent>
-
-            {/* 낮은 평가 */}
-            <TabsContent value="low-rated">
-              {lowRatedConversations.length > 0 ? (
-                <div className="space-y-4">
-                  {lowRatedConversations.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-5 bg-red-50 rounded-xl border border-red-200"
-                    >
-                      <div className="mb-3">
-                        <div className="font-semibold text-red-700 mb-1">
-                          질문
-                        </div>
-
-                        <p className="text-gray-800">
-                          {log.question}
-                        </p>
-                      </div>
-
-                      <div>
-                        <div className="font-semibold text-red-700 mb-1">
-                          답변
-                        </div>
-
-                        <p className="text-gray-700 whitespace-pre-wrap">
-                          {log.answer}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-20 text-center">
-                  <ThumbsDown className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-
-                  <p className="text-gray-500">
-                    낮은 평가 데이터가 없습니다.
-                  </p>
                 </div>
               )}
             </TabsContent>
