@@ -154,7 +154,7 @@ export function AdminHome() {
       </div>
 
       {/* 상단 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
         
         {/* 사용자 카드 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
@@ -211,10 +211,6 @@ export function AdminHome() {
               <span className="text-gray-600">주간 메시지</span>
               <span className="font-bold text-orange-600">{stats.chatbot.weeklyMessages.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between border-t pt-3 text-sm">
-              <span className="text-gray-600">주간 토큰</span>
-              <span className="font-bold text-purple-600">{stats.chatbot.weeklyTokens.toLocaleString()}</span>
-            </div>
           </div>
         </div>
 
@@ -237,25 +233,6 @@ export function AdminHome() {
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">실패</span>
               <span className="font-bold text-red-500">{stats.documents.failed.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 파이프라인 카드 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">파이프라인</h2>
-            <Activity className="w-5 h-5 text-orange-500" />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">실행중</span>
-              <span className="font-bold text-green-600">{stats.pipeline.running.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">실패</span>
-              <span className="font-bold text-red-500">{stats.pipeline.failed.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -303,10 +280,10 @@ export function AdminHome() {
           </div>
         </div>
 
-        {/* 조회 급증 종목 */}
+        {/* 인기 조회 종목 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">조회 급증 종목</h2>
+            <h2 className="text-lg font-semibold text-gray-900">인기 조회 종목</h2>
             <TrendingUp className="w-5 h-5 text-red-500" />
           </div>
           {ipoData.trendingIpos.length > 0 ? (

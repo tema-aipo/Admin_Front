@@ -35,7 +35,7 @@ export function Header({
               onClick={onLogoClick}
               className="text-2xl font-bold text-gray-900 mr-12 py-5 hover:text-blue-600 transition-colors"
             >
-              ADMIN
+              APIO ADMIN
             </button>
 
             <nav className="flex">
