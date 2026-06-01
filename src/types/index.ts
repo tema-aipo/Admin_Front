@@ -138,6 +138,8 @@ export interface ConversationLog {
   timestamp: string;
   rating: "like" | "dislike" | null;
   category: string;
+  reasonCode?: string | null;
+  reasonDetail?: string | null;
 }
 
 export interface ChatbotStats {
