@@ -10,12 +10,7 @@ import {
   CalendarDays
 } from "lucide-react";
 
-import type {
-  IpoViewStats,
-  SurgingStock,
-  TopSurgingStock,
-  FavoriteStock,
-} from "../../types";
+import type { IpoViewStats } from "../../types";
 
 const BASE_URL = "http://3.37.25.92:8080";
 
@@ -23,7 +18,6 @@ interface DashboardStats {
   users: {
     total: number;
     active: number;
-    suspended: number;
     withdrawn: number;
     newLast7Days: number;
   };
@@ -33,20 +27,14 @@ interface DashboardStats {
     todayMessages: number;
     todaySessions: number;
     weeklyMessages: number;
-    weeklyTokens: number;
   };
   documents: {
     total: number;
     processing: number;
     failed: number;
   };
-  pipeline: {
-    running: number;
-    failed: number;
-  };
 }
 
-// API 스키마에 맞춘 공모주 통계 인터페이스 정의
 interface IpoStatsResponse {
   viewStats: IpoViewStats;
   trendingIpos: Array<{
@@ -62,10 +50,9 @@ interface IpoStatsResponse {
 }
 
 const defaultStats: DashboardStats = {
-  users: { total: 0, active: 0, suspended: 0, withdrawn: 0, newLast7Days: 0 },
-  chatbot: { totalMessages: 0, totalSessions: 0, todayMessages: 0, todaySessions: 0, weeklyMessages: 0, weeklyTokens: 0 },
+  users: { total: 0, active: 0, withdrawn: 0, newLast7Days: 0 },
+  chatbot: { totalMessages: 0, totalSessions: 0, todayMessages: 0, todaySessions: 0, weeklyMessages: 0 },
   documents: { total: 0, processing: 0, failed: 0 },
-  pipeline: { running: 0, failed: 0 },
 };
 
 const defaultIpoStats: IpoStatsResponse = {
@@ -79,9 +66,6 @@ export function AdminHome() {
   const [ipoStats, setIpoStats] = useState<IpoStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * 대시보드 및 공모주 통계 통합 조회
-   */
   const fetchAllDashboardData = async () => {
     try {
       setLoading(true);
@@ -97,7 +81,6 @@ export function AdminHome() {
         "Content-Type": "application/json",
       };
 
-      // 두 API를 병렬로 호출하여 성능 최적화
       const [statsRes, ipoRes] = await Promise.all([
         fetch(`${BASE_URL}/api/v1/admin/dashboard/stats`, { method: "GET", headers }),
         fetch(`${BASE_URL}/api/v1/admin/dashboard/ipo-stats`, { method: "GET", headers })
@@ -109,6 +92,7 @@ export function AdminHome() {
 
       const statsData: DashboardStats = await statsRes.json();
       const ipoData: IpoStatsResponse = await ipoRes.json();
+      //console.log("백엔드 수신 데이터 (stats):", statsData);
 
       setDashboardStats(statsData);
       setIpoStats(ipoData);
@@ -127,6 +111,9 @@ export function AdminHome() {
   const stats = dashboardStats ?? defaultStats;
   const ipoData = ipoStats ?? defaultIpoStats;
 
+  // 문서 완료 수 계산
+  const successDocs = Math.max(0, stats.documents.total - stats.documents.processing - stats.documents.failed);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -139,7 +126,7 @@ export function AdminHome() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* 헤더 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -154,88 +141,159 @@ export function AdminHome() {
       </div>
 
       {/* 상단 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-3 gap-6 mb-10">
         
         {/* 사용자 카드 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">사용자</h2>
-            <Users className="w-5 h-5 text-blue-500" />
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800">사용자 현황</h2>
+              <div className="p-2">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <span className="text-xs font-medium text-gray-500 block mb-1">전체 회원 수</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold">{stats.users.total.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-500">명</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-4">
+              <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                <span className="text-[11px] text-gray-600 block mb-0.5">활성 회원</span>
+                <span className="text-sm font-bold text-emerald-600 truncate block">{stats.users.active.toLocaleString()}명</span>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <span className="text-[11px] text-gray-600 block mb-0.5">탈퇴 회원</span>
+                <span className="text-sm font-bold text-gray-600 truncate block">{stats.users.withdrawn.toLocaleString()}명</span>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">전체 회원</span>
-              <span className="font-bold text-gray-900">{stats.users.total.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">활성 회원</span>
-              <span className="font-bold text-green-600">{stats.users.active.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">탈퇴 회원</span>
-              <span className="font-bold text-gray-700">{stats.users.withdrawn.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between border-t pt-3 text-sm">
-              <span className="text-gray-600">최근 7일 가입</span>
-              <span className="font-bold text-blue-600">+{stats.users.newLast7Days.toLocaleString()}</span>
-            </div>
+          <div className="mt-4 flex items-center justify-between bg-blue-50 rounded-lg px-4 py-2.5 text-xs">
+            <span className="text-blue-800 font-medium">최근 7일간 신규 가입</span>
+            <span className="font-bold text-blue-600 bg-white px-2 py-0.5 rounded-md border border-blue-100">
+              +{stats.users.newLast7Days.toLocaleString()}명
+            </span>
           </div>
         </div>
 
         {/* 챗봇 카드 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">챗봇</h2>
-            <MessageSquare className="w-5 h-5 text-purple-500" />
-          </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800">챗봇 활동 지표</h2>
+              <div className="p-2">
+                <MessageSquare className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">전체 메시지</span>
-              <span className="font-bold text-gray-900">{stats.chatbot.totalMessages.toLocaleString()}</span>
+            <div className="grid grid-cols-2 gap-4 mb-5 bg-purple-50 rounded-xl p-4">
+              <div>
+                <span className="text-[11px] font-medium text-purple-600 block mb-0.5">누적 메시지</span>
+                <span className="text-xl font-extrabold text-gray-900">{stats.chatbot.totalMessages.toLocaleString()}</span>
+              </div>
+              <div className="border-l border-purple-300 pl-4">
+                <span className="text-[11px] font-medium text-purple-600 block mb-0.5">누적 세션</span>
+                <span className="text-xl font-extrabold text-gray-900">{stats.chatbot.totalSessions.toLocaleString()}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">전체 세션</span>
-              <span className="font-bold text-gray-900">{stats.chatbot.totalSessions.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">오늘 메시지</span>
-              <span className="font-bold text-blue-600">{stats.chatbot.todayMessages.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">오늘 세션</span>
-              <span className="font-bold text-green-600">{stats.chatbot.todaySessions.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">주간 메시지</span>
-              <span className="font-bold text-orange-600">{stats.chatbot.weeklyMessages.toLocaleString()}</span>
+
+            <div className="space-y-2.5">
+              <div className="flex justify-between items-center text-sm p-1">
+                <span className="text-gray-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>오늘 메시지
+                </span>
+                <span className="font-bold text-gray-900">{stats.chatbot.todayMessages.toLocaleString()}건</span>
+              </div>
+              <div className="flex justify-between items-center text-sm p-1">
+                <span className="text-gray-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>오늘 세션
+                </span>
+                <span className="font-bold text-gray-900">{stats.chatbot.todaySessions.toLocaleString()}건</span>
+              </div>
+              <div className="flex justify-between items-center text-sm p-1">
+                <span className="text-gray-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>주간 메시지
+                </span>
+                <span className="font-bold text-gray-900">{stats.chatbot.weeklyMessages.toLocaleString()}건</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* 문서 카드 */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">문서 처리</h2>
-            <Database className="w-5 h-5 text-green-600" />
-          </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800">문서 처리 현황</h2>
+              <div className="p-2">
+                <Database className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">전체 문서</span>
-              <span className="font-bold text-gray-900">{stats.documents.total.toLocaleString()}</span>
+            {/* 메인 하이라이트 수치 */}
+            <div className="mb-5">
+              <span className="text-xs font-medium text-gray-500 block mb-1">전체 문서 수</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold">{stats.documents.total.toLocaleString()}</span>
+                <span className="text-sm font-medium text-gray-500">건</span>
+              </div>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">처리중</span>
-              <span className="font-bold text-yellow-500">{stats.documents.processing.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">실패</span>
-              <span className="font-bold text-red-500">{stats.documents.failed.toLocaleString()}</span>
+
+            {/* 게이지 바 디자인 영역 */}
+            <div className="space-y-4 pt-4">
+              {/* 정상 완료 게이지 */}
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-medium text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>정상 완료
+                  </span>
+                  <span className="text-gray-800">
+                    {successDocs.toLocaleString()}건 ({stats.documents.total ? Math.round((successDocs / stats.documents.total) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                  <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${stats.documents.total ? (successDocs / stats.documents.total) * 100 : 0}%` }} />
+                </div>
+              </div>
+
+              {/* 처리중 게이지 */}
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-medium text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>처리 대기/중
+                  </span>
+                  <span className="text-gray-800">
+                    {stats.documents.processing.toLocaleString()}건 ({stats.documents.total ? Math.round((stats.documents.processing / stats.documents.total) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                  <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${stats.documents.total ? (stats.documents.processing / stats.documents.total) * 100 : 0}%` }} />
+                </div>
+              </div>
+
+              {/* 실패 게이지 */}
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-medium text-gray-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>처리 실패
+                  </span>
+                  <span className="text-gray-800">
+                    {stats.documents.failed.toLocaleString()}건 ({stats.documents.total ? Math.round((stats.documents.failed / stats.documents.total) * 100) : 0}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                  <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${stats.documents.total ? (stats.documents.failed / stats.documents.total) * 100 : 0}%` }} />
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
       </div>
 
       {/* 공모주 통계 섹션 타이틀 */}
@@ -246,7 +304,6 @@ export function AdminHome() {
 
       {/* 하단 통계 그리드 영역 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* 공모주 조회 상세 통계 */}
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -291,7 +348,7 @@ export function AdminHome() {
               {ipoData.trendingIpos.map((item, idx) => (
                 <li key={item.ipoId || idx} className="flex justify-between items-center py-3 text-sm">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-400 w-4">{idx + 1}</span>
+                    <span className="font-semibold text-red-400 w-4">{idx + 1}</span>
                     <span className="text-gray-800 font-medium">{item.stockName}</span>
                   </div>
                   <span className="text-gray-500 text-xs">{item.viewCount.toLocaleString()} 회 조회</span>

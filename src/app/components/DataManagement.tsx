@@ -21,7 +21,7 @@ import {
 
 const BASE_URL = "http://3.37.25.92:8080";
 
-// --- API 응답 인터페이스 정의 ---
+// API 응답 인터페이스 정의
 interface DocumentApiResponse {
   docId: number;
   originalName: string;
@@ -78,7 +78,7 @@ interface SystemStatusResponse {
   checkedAt: string;
 }
 
-// --- 파이프라인 관련 인터페이스 ---
+// 파이프라인 관련 인터페이스
 interface PipelineStatusResponse {
   queued: number;
   running: number;
@@ -549,16 +549,10 @@ export function DataManagement() {
       {/* 파이프라인 관리 탭 패널 */}
       {selectedTab === "파이프라인" && (
         <div className="space-y-6">
-          {/* 실시간 파이프라인 상태 현황 요약 카드 (전체 너비로 확장) */}
+          {/* 실시간 파이프라인 상태 현황 요약 카드 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-black">파이프라인 작업 상태 요약</h3>
-              <button 
-                onClick={() => { fetchPipelineStatus(); fetchPipelineJobs(0, statusFilter); }} 
-                className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
-              >
-                <RefreshCw className="w-3 h-3" /> 새로고침
-              </button>
             </div>
             <div className="grid grid-cols-5 gap-4 text-center">
               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
@@ -798,7 +792,7 @@ export function DataManagement() {
             </div>
           ) : systemStatus ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Card 1: 전체 시스템 상태 및 데이터베이스 */}
+              {/* 전체 시스템 상태 및 데이터베이스 */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2.5">
@@ -833,7 +827,7 @@ export function DataManagement() {
                 </div>
               </div>
 
-              {/* Card 2: 메모리 사용량 (Memory) */}
+              {/* 메모리 사용량 (Memory) */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center gap-2.5 mb-4">
                   <Cpu className="w-5 h-5 text-purple-600" />
@@ -859,7 +853,7 @@ export function DataManagement() {
                 </div>
               </div>
 
-              {/* Card 3: 시스템 업타임 (Uptime) */}
+              {/* 시스템 업타임 (Uptime) */}
               <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                 <div className="flex items-center gap-2.5 mb-4">
                   <Clock className="w-5 h-5 text-orange-600" />
@@ -958,8 +952,8 @@ export function DataManagement() {
                   <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        총 <span className="font-medium">{totalPages}</span> 페이지 중{" "}
-                        <span className="font-medium">{currentPage + 1}</span> 페이지
+                        총 <span className="font-semibold">{totalPages}</span> 페이지 중{" "}
+                        <span className="font-semibold">{currentPage + 1}</span> 페이지
                       </p>
                     </div>
                     <div>

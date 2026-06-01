@@ -23,7 +23,8 @@ import type {
   ChatbotStats,
 } from "../../types";
 
-const BASE_URL = "http://3.37.25.92:8080";
+const BASE_URL =
+  "http://3.37.25.92:8080";
 
 interface ChatbotLogResponse {
   totalElements: number;
@@ -36,13 +37,24 @@ interface ChatbotLogResponse {
 interface ChatbotLogItem {
   logId: number;
   sessionId: string;
+
   messageRole:
     | "USER"
     | "ASSISTANT"
     | "SYSTEM";
+
   content: string;
+
   tokenCount: number;
+
   createdAt: string;
+
+  /**
+   * true  = 좋아요
+   * false = 싫어요
+   * null  = 미평가
+   */
+  isLiked?: boolean | null;
 }
 
 export function ChatbotManagement() {
@@ -50,7 +62,9 @@ export function ChatbotManagement() {
     useState("");
 
   const [conversationLogs, setConversationLogs] =
-    useState<ConversationLog[]>([]);
+    useState<ConversationLog[]>(
+      []
+    );
 
   const [stats, setStats] =
     useState<ChatbotStats>({
@@ -82,14 +96,17 @@ export function ChatbotManagement() {
       bg: "bg-blue-100",
       text: "text-blue-600",
     },
+
     green: {
       bg: "bg-green-100",
       text: "text-green-600",
     },
+
     red: {
       bg: "bg-red-100",
       text: "text-red-600",
     },
+
     purple: {
       bg: "bg-purple-100",
       text: "text-purple-600",
@@ -105,14 +122,12 @@ export function ChatbotManagement() {
 
   /**
    * 챗봇 로그 조회
-   *
-   * 전체 가져와서
-   * 프론트 검색 + 프론트 페이징
    */
   const fetchChatbotLogs =
     async () => {
       try {
         setLoading(true);
+
         setError("");
 
         const accessToken =
@@ -129,17 +144,20 @@ export function ChatbotManagement() {
         /**
          * 전체 조회
          */
-        const response = await fetch(
-          `${BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=10000`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${BASE_URL}/api/v1/admin/logs/chatbot?page=0&size=10000`,
+            {
+              method: "GET",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
 
         if (
           response.status === 401
@@ -165,6 +183,8 @@ export function ChatbotManagement() {
 
         const data: ChatbotLogResponse =
           await response.json();
+
+        //console.log("전체 데이터 구조:", data);
 
         /**
          * 시간순 정렬
@@ -220,15 +240,31 @@ export function ChatbotManagement() {
 
           mappedLogs.push({
             id: current.logId,
+
             userId:
               current.sessionId,
+
             category: "일반",
+
             question:
               current.content,
+
             answer:
               assistantMessage?.content ||
               "답변 없음",
-            rating: "like",
+
+            /**
+             * 평가 반영
+             */
+            rating:
+              assistantMessage?.isLiked ===
+              true
+                ? "like"
+                : assistantMessage?.isLiked ===
+                  false
+                ? "dislike"
+                : null,
+
             timestamp:
               current.createdAt,
           });
@@ -268,22 +304,26 @@ export function ChatbotManagement() {
               "dislike"
           ).length;
 
-        const total =
-          mappedLogs.length;
+        const evaluatedCount =
+          likes + dislikes;
 
         const satisfaction =
-          total === 0
+          evaluatedCount === 0
             ? 0
             : Math.round(
-                (likes / total) *
+                (likes /
+                  evaluatedCount) *
                   100
               );
 
         setStats({
           totalConversations:
-            total,
+            mappedLogs.length,
+
           likes,
+
           dislikes,
+
           satisfaction,
         });
       } catch (err) {
@@ -379,29 +419,44 @@ export function ChatbotManagement() {
   const conversationStats = [
     {
       label: "총 대화 수",
+
       value:
         stats.totalConversations.toLocaleString(),
+
       icon: BarChart3,
+
       color: "blue",
     },
+
     {
       label: "좋아요",
+
       value:
         stats.likes.toLocaleString(),
+
       icon: ThumbsUp,
+
       color: "green",
     },
+
     {
       label: "싫어요",
+
       value:
         stats.dislikes.toLocaleString(),
+
       icon: ThumbsDown,
+
       color: "red",
     },
+
     {
       label: "만족도",
+
       value: `${stats.satisfaction}%`,
+
       icon: TrendingUp,
+
       color: "purple",
     },
   ];
@@ -547,12 +602,19 @@ export function ChatbotManagement() {
                                     좋아요
                                   </span>
                                 </div>
-                              ) : (
+                              ) : log.rating ===
+                                "dislike" ? (
                                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100">
                                   <ThumbsDown className="w-3 h-3 text-red-600" />
 
                                   <span className="text-xs font-medium text-red-700">
                                     싫어요
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100">
+                                  <span className="text-xs font-medium text-gray-600">
+                                    미평가
                                   </span>
                                 </div>
                               )}
@@ -569,12 +631,16 @@ export function ChatbotManagement() {
                                 {
                                   year:
                                     "numeric",
+
                                   month:
                                     "short",
+
                                   day:
                                     "numeric",
+
                                   hour:
                                     "2-digit",
+
                                   minute:
                                     "2-digit",
                                 }
@@ -639,22 +705,11 @@ export function ChatbotManagement() {
             <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 rounded-b-xl mt-6">
               <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <p className="text-sm text-gray-700">
-                  총{" "}
-                  <span className="font-medium">
-                    {
-                      totalPages
-                    }
-                  </span>
-                  개 중{" "}
-                  <span className="font-medium">
-                    {currentPage +
-                      1}
-                  </span>
-                  페이지
+                  총 <span className="font-semibold">{totalPages}</span> 페이지 중{" "}
+                  <span className="font-semibold">{currentPage + 1}</span> 페이지
                 </p>
 
                 <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
-                  {/* 첫 페이지 */}
                   <button
                     onClick={() =>
                       handlePageChange(
@@ -670,7 +725,6 @@ export function ChatbotManagement() {
                     <ChevronsLeft className="w-4 h-4" />
                   </button>
 
-                  {/* 이전 */}
                   <button
                     onClick={() =>
                       handlePageChange(
@@ -687,7 +741,6 @@ export function ChatbotManagement() {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
 
-                  {/* 페이지 번호 */}
                   {(() => {
                     let startPage =
                       Math.max(
@@ -765,7 +818,6 @@ export function ChatbotManagement() {
                     );
                   })()}
 
-                  {/* 다음 */}
                   <button
                     onClick={() =>
                       handlePageChange(
@@ -783,7 +835,6 @@ export function ChatbotManagement() {
                     <ChevronRight className="w-4 h-4" />
                   </button>
 
-                  {/* 마지막 */}
                   <button
                     onClick={() =>
                       handlePageChange(

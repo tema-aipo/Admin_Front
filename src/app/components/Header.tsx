@@ -29,13 +29,12 @@ export function Header({
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between">
-          {/* Left - Logo and Navigation */}
           <div className="flex items-center">
             <button
               onClick={onLogoClick}
               className="text-2xl font-bold text-gray-900 mr-12 py-5 hover:text-blue-600 transition-colors"
             >
-              APIO ADMIN
+              AIPO ADMIN
             </button>
 
             <nav className="flex">
@@ -59,7 +58,6 @@ export function Header({
             </nav>
           </div>
 
-          {/* Right - Auth */}
           <div className="flex items-center gap-3">
             {user && (
               <>

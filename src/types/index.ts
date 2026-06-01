@@ -114,13 +114,6 @@ export interface RAGDocument {
   embeddingCount: number;
 }
 
-export interface AttractionWeight {
-  id: number;
-  factor: string;
-  weight: number;
-  description: string;
-}
-
 export interface ReferenceDocument {
   id: number;
   title: string;
@@ -143,14 +136,8 @@ export interface ConversationLog {
   question: string;
   answer: string;
   timestamp: string;
-  rating: "like" | "dislike";
+  rating: "like" | "dislike" | null;
   category: string;
-}
-
-export interface QuestionCategory {
-  category: string;
-  count: number;
-  color: string;
 }
 
 export interface ChatbotStats {
